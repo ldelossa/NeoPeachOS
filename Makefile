@@ -19,3 +19,13 @@ clean:
 	rm -rf $(SRC_DIR)/boot/*.o
 	rm -rf $(SRC_DIR)/boot/boot
 	rm -rf $(BIN_DIR)/boot.bin
+
+.PHONY:
+run:
+	qemu-system-x86_64 -nographic ./bin/boot.bin
+
+run-debug:
+	qemu-system-x86_64 -nographic -s -S ./bin/boot.bin
+
+debug:
+	lldb -o "gdb-remote 0.0.0.0:1234" ./src/boot/boot

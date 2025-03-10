@@ -75,6 +75,11 @@ idle_32:
 	mov ebp, 0x00200000
 	mov esp, ebp
 
+	; set fast a20 gate
+	in al, 0x92
+	or al, 2
+	out 0x92, al
+
 	jmp $
 
 global message
@@ -87,9 +92,3 @@ times 510 - ($ - $$) db 0
 ; write the boot signature word
 dw 0xAA55 ; NASM will interpret this as little endian, so flip it, so when it
 		  ; writes it to our image its in the correct order.
-
-section .sector_two
-INCBIN "./src/boot/sector_two.bin"
-db 0
-; pad out second sector
-times 512 - ($ - $$) db 0
