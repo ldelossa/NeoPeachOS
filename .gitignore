@@ -1,0 +1,4 @@
+*.o
+*.bin
+src/boot/boot
+src/kernel/kernel

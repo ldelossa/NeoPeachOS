@@ -7,7 +7,7 @@ section .text.bootloader
 jmp start;
 
 gdt_start:
-	dq 0x0 		; mandatory null segment descriptor
+	dq 0x0		; mandatory null segment descriptor
 gdt_code:
 CODE_SEGMENT equ (gdt_code - gdt_start);
 	dw 0xFFFF	; limit set to 4Gb
@@ -15,7 +15,7 @@ CODE_SEGMENT equ (gdt_code - gdt_start);
 	db 0x0		; base[1]
 	db 10011010b	; access byte: ring 0 access, exec bit
 	db 11001111b	; flags|limit: flags(page granularity, 32bit segment)
-	db 0x0 		; base[2]
+	db 0x0		; base[2]
 	; Data segment descriptor
 gdt_data:
 DATA_SEGMENT equ (gdt_data - gdt_start)
@@ -24,7 +24,7 @@ DATA_SEGMENT equ (gdt_data - gdt_start)
 	db 0x0		; base[1]
 	db 10010010b	; access byte: ring 0 access, data bit
 	db 11001111b	; flags|limit: flags(page granularity, 32bit segment)
-	db 0x0 		; base[2]
+	db 0x0		; base[2]
 gdt_end:
 
 gdt_descriptor:
@@ -43,8 +43,8 @@ start:
 
 	sti		 ; enables interrupt
 
-	mov 	si, message
-	mov 	ah, 0x0E ; holds bios routine selector for printing
+	mov		si, message
+	mov		ah, 0x0E ; holds bios routine selector for printing
 .loop:
 	lodsb	; load byte si -> al and increment si
 	cmp		al, 0
@@ -60,12 +60,12 @@ protected_mode_switch:
 	or eax, 0x1
 	mov cr0, eax
 
-	jmp CODE_SEGMENT:idle_32
+	jmp CODE_SEGMENT:load_kernel_32
 
 ; 32 bit mode from here on out...
 [BITS 32]
-idle_32:
-	; finish register setup
+load_kernel_32:
+	; setup our registers and stack
 	mov ax, DATA_SEGMENT
 	mov ds, ax
 	mov es, ax
@@ -80,7 +80,16 @@ idle_32:
 	or al, 2
 	out 0x92, al
 
+	call ata_load_kernel
+
+	; must far-jump (segment:address) for assembler to produce a jmp to an
+	; absolute address.
+	jmp CODE_SEGMENT:KERNEL_LOAD_ADDR
+
 	jmp $
+
+; include ATA routine for reading kernel sectors and loading to memory.
+%include "src/boot/ata_32.asm"
 
 global message
 message: db 'Hello World!', 0
@@ -90,5 +99,8 @@ message: db 'Hello World!', 0
 ; zero padding necessary to get to 511 byte.
 times 510 - ($ - $$) db 0
 ; write the boot signature word
-dw 0xAA55 ; NASM will interpret this as little endian, so flip it, so when it
-		  ; writes it to our image its in the correct order.
+dw 0xAA55	; NASM will interpret this as little endian, so flip it, so when it
+			; writes it to our image its in the correct order.
+
+; append our kernel image into any following sectors
+INCBIN "./bin/kernel.bin"
